@@ -27,7 +27,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
                 <data android:mimeType="image/*"/>
-
+                <!--测试GitHub-->
             </intent-filter>
         </activity>
         <activity android:name=".IntentDemoActivity"></activity>
