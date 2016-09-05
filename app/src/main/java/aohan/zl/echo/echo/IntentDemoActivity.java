@@ -47,6 +47,7 @@ import aohan.zl.echo.echo.util.BaseUtil;
 
 public class IntentDemoActivity extends AppCompatActivity {
 
+    //Acitivity被创建的时候初始化
     private  Activity thisActivity=null;
 
     private String willCallPhone="10000";
