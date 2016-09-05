@@ -183,10 +183,7 @@ public class IntentDemoActivity extends AppCompatActivity {
             Bitmap photo = null;
             // photoid 大于0 表示联系人有头像 如果没有给此人设置头像则给他一个默认的
             if (photoId>0){
-
-               // byte[] head=cursor.getBlob(cursor.getColumnIndex(ContactsContract.Data.DATA15));
                 InputStream inputStream=null;
-
                 try {
                     Uri uri= ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI,contactId);
                     inputStream=ContactsContract.Contacts.openContactPhotoInputStream(getContentResolver(),uri,true);
@@ -272,7 +269,14 @@ public class IntentDemoActivity extends AppCompatActivity {
                     if (ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
                         try{
                             if (ActivityCompat.shouldShowRequestPermissionRationale(thisActivity,Manifest.permission.CALL_PHONE)){
-                                Toast.makeText(getApplicationContext(),"没有该权限无法进行直接拨号。",Toast.LENGTH_SHORT);
+
+                                DialogInterface.OnClickListener btn2ClickListener=new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        ActivityCompat.requestPermissions(thisActivity, new String[]{android.Manifest.permission.CALL_PHONE}, 111);
+                                    }
+                                };
+                                showCommonDialog("该操作需要获取拨号权限.",null,"授权",null,btn2ClickListener);
                             }else {
                                 ActivityCompat.requestPermissions(thisActivity, new String[]{android.Manifest.permission.CALL_PHONE}, 111);
                             }
@@ -287,8 +291,6 @@ public class IntentDemoActivity extends AppCompatActivity {
                     Intent telIntent = new Intent(Intent.ACTION_DIAL, tel);
                     startActivity(telIntent);
                 }
-
-
             }
         });
     }
@@ -342,6 +344,32 @@ public class IntentDemoActivity extends AppCompatActivity {
                 dialog.cancel();
             }
         });
+        AlertDialog dialog=alertdialogbuilder.create();
+        dialog.show();
+    }
+
+    /**
+     * 提供带两个按钮的消息提示框
+     * @param message 消息主体
+     * @param btn1 按钮1显示文本
+     * @param btn2 按钮2显示文本
+     * @param btn1ClickListener 按钮1单击监听事件
+     * @param btn2ClickListener 按钮2单击监听事件
+     */
+    public  void  showCommonDialog(String message, String btn1, String btn2,
+                                   DialogInterface.OnClickListener btn1ClickListener, DialogInterface.OnClickListener btn2ClickListener){
+        AlertDialog.Builder alertdialogbuilder=new AlertDialog.Builder(this);
+        if (btn1==null){
+            alertdialogbuilder.setPositiveButton("取消", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.cancel();
+                }
+            });
+        }
+        alertdialogbuilder.setMessage(message);
+        alertdialogbuilder.setPositiveButton(btn1, btn1ClickListener);
+        alertdialogbuilder.setNegativeButton(btn2,btn2ClickListener);
         AlertDialog dialog=alertdialogbuilder.create();
         dialog.show();
     }

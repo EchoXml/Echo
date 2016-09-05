@@ -30,7 +30,10 @@
                 <!--测试GitHub-->
             </intent-filter>
         </activity>
-        <activity android:name=".IntentDemoActivity"></activity>
+        <activity android:name=".IntentDemoActivity"
+            android:exported="true">
+
+        </activity>
     </application>
 
 </manifest>
