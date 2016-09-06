@@ -162,7 +162,7 @@ public class IntentDemoActivity extends AppCompatActivity {
         if (resultCode == RESULT_OK&&requestCode==CONTACT_REQUEST_CODE) {
             Uri contact = data.getData();
             String[] projection = {ContactsContract.CommonDataKinds.Phone.NUMBER, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.CONTACT_ID, ContactsContract.Contacts.Photo.PHOTO_ID};
-            Cursor cursor = getContentResolver().query(contact, projection, null, null, null);
+            Cursor cursor= getContentResolver().query(contact, projection, null, null, null);
             cursor.moveToNext();
             String phoneNumber = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
             String contactName = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
@@ -174,30 +174,44 @@ public class IntentDemoActivity extends AppCompatActivity {
             cursor.close();
         }else if (resultCode==RESULT_OK&&requestCode==CONTACTHEAD_REQUEST_CODE){
             Uri contact = data.getData();
-            String[] projection = {ContactsContract.CommonDataKinds.Phone.CONTACT_ID, ContactsContract.Contacts.Photo.PHOTO_ID};
+            System.out.println(contact.toString());
+            String[] projection = {ContactsContract.CommonDataKinds.Phone.CONTACT_ID};
 
             Cursor cursor = getContentResolver().query(contact, projection, null, null, null);
             cursor.moveToNext();
             Integer photoId = cursor.getInt(cursor.getColumnIndex(ContactsContract.Contacts.Photo.PHOTO_ID));
            long contactId=(long)cursor.getInt(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID));
+           cursor.close();
             Bitmap photo = null;
             // photoid 大于0 表示联系人有头像 如果没有给此人设置头像则给他一个默认的
             if (photoId>0){
                 InputStream inputStream=null;
                 try {
                     Uri uri= ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI,contactId);
-                    inputStream=ContactsContract.Contacts.openContactPhotoInputStream(getContentResolver(),uri,true);
+                    Uri photoUri=Uri.withAppendedPath(uri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY);
+                    cursor= getContentResolver().query(photoUri,new String[]{ContactsContract.Contacts.Photo.PHOTO},null
+                    ,null,null);
+                    if (cursor==null)
+                        return;
+                    byte[] photoData=cursor.getBlob(0);
+                    if (photoData!=null){
+                        inputStream=new ByteArrayInputStream(photoData);
+                        photo= BitmapFactory.decodeStream(inputStream);
+                        ImageView photoIv= (ImageView) findViewById(R.id.ivHead);
+                        photoIv.setImageBitmap(photo);
+//                        OutputStream outputStream=new FileOutputStream(new File(photo))
+//                        Intent photoIntent=new Intent();
+//                        photoIntent.putExtra("photo",photo);
+//                        setResult(resultCode,photoIntent);
+//                        return;
+                    }
+
                 }catch (Exception e){
                     e.printStackTrace();
                 }
-                photo= BitmapFactory.decodeStream(inputStream);
-//                ImageView photoIv= (ImageView) findViewById(R.id.ivHead);
-//                photoIv.setImageBitmap(photo);
-                //OutputStream outputStream=new FileOutputStream(new File(photo))
-                Intent photoIntent=new Intent();
-                photoIntent.putExtra("photo",photo);
-                setResult(resultCode,photoIntent);
-                return;
+
+
+
             }
         }
     }
@@ -224,6 +238,7 @@ public class IntentDemoActivity extends AppCompatActivity {
     public void showAllContact(){
         String[] projection = {ContactsContract.CommonDataKinds.Phone.NUMBER, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.CONTACT_ID, ContactsContract.Contacts.Photo.PHOTO_ID};
         Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
+        System.out.println(uri.toString());
 
         Cursor cursor = getContentResolver().query(uri, projection, null, null, null);
         final List<ContactPerson> persons = new ArrayList<>();
@@ -233,7 +248,7 @@ public class IntentDemoActivity extends AppCompatActivity {
             Integer contactId = cursor.getInt(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID));
             Integer photoId = cursor.getInt(cursor.getColumnIndex(ContactsContract.Contacts.Photo.PHOTO_ID));
             Bitmap photo = null;
-            //photoid 大于0 表示联系人有头像 如果没有给此人设置头像则给他一个默认的
+//photoid 大于0 表示联系人有头像 如果没有给此人设置头像则给他一个默认的
 //            if (photoId>0){
 //
 //                InputStream inputStream=ContactsContract.Contacts.openContactPhotoInputStream(getContentResolver(),uri);
@@ -366,9 +381,11 @@ public class IntentDemoActivity extends AppCompatActivity {
                     dialog.cancel();
                 }
             });
+        }else{
+            alertdialogbuilder.setPositiveButton(btn1, btn1ClickListener);
         }
         alertdialogbuilder.setMessage(message);
-        alertdialogbuilder.setPositiveButton(btn1, btn1ClickListener);
+
         alertdialogbuilder.setNegativeButton(btn2,btn2ClickListener);
         AlertDialog dialog=alertdialogbuilder.create();
         dialog.show();
