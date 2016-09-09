@@ -22,8 +22,10 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
@@ -31,10 +33,14 @@ import android.widget.Toast;
 
 
 import com.google.gson.Gson;
+import com.tencent.mm.sdk.openapi.IWXAPI;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -48,19 +54,81 @@ import aohan.zl.echo.echo.util.BaseUtil;
 public class IntentDemoActivity extends AppCompatActivity {
 
     //Acitivity被创建的时候初始化
-    private  Activity thisActivity=null;
+    private Activity thisActivity = null;
 
-    private String willCallPhone="10000";
+    private static final String TAG = "IntentDemoActivity";
 
-    private static final Integer CONTACT_REQUEST_CODE=100;
+    private String willCallPhone = "10000";
 
-    private static final Integer CONTACTHEAD_REQUEST_CODE=101;
+    private static final Integer CONTACT_REQUEST_CODE = 100;
+
+    private static final Integer WRITE_EXTERNAL_REQUEST_CODE = 102;
+
+    private IWXAPI api;
+
+    private static final Integer CONTACTHEAD_REQUEST_CODE = 101;
+
+    private static final Integer CONTACTALLHEAD_REQUEST_CODE = 103;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_intent_demo);
-        thisActivity=this;
+        thisActivity = this;
+        // 微信注册初始化
+//        api = WXAPIFactory.createWXAPI(this, "wx5ce2ffa100e3f587", true);
+//        api.registerApp("wx5ce2ffa100e3f587");
+
+        Button head = (Button) findViewById(R.id.btnHead);
+        Button getAllHeads = (Button) findViewById(R.id.btnGetAllHead);
+        if (getAllHeads != null) {
+            getAllHeads.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                   if (Build.VERSION.SDK_INT>=Build.VERSION_CODES.M){
+                       if (PackageManager.PERMISSION_GRANTED!=ContextCompat.checkSelfPermission(getApplicationContext(),Manifest.permission.READ_CONTACTS)){
+                           ActivityCompat.requestPermissions(thisActivity,new String[]{Manifest.permission.READ_CONTACTS},CONTACTALLHEAD_REQUEST_CODE);
+                           return;
+                       }
+                   }
+                    List<ContactPerson> persons=getAllHead();
+                    for (ContactPerson person:persons) {
+                        System.out.println(person.getContactName()+person.getPhoto());
+                    }
+
+                }
+            });
+        }
+        if (head != null) {
+            head.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    //File file=new File(getExternalStorageDir("test")+"1.png");
+                    ImageView photoIv = (ImageView) findViewById(R.id.ivHead);
+                    photoIv.setImageBitmap(BitmapFactory.decodeFile(getExternalStorageDir("test") + "1.png"));
+                }
+            });
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.e(IntentDemoActivity.TAG, this.getClass().getName() + " exec onStart...");
+        Intent intent = getIntent();
+        Log.e(IntentDemoActivity.TAG, String.valueOf(intent.getSerializableExtra("person") == null));
+        if (intent != null && intent.getType() != null) {
+            Log.e(IntentDemoActivity.TAG, intent.getType());
+        }
+        if (intent.getType() != null && intent.getType().equals("text/plain")) {
+            showCommonDialog(intent.getStringExtra("personInfo"));
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        //System.out.println("exec onResume...");
     }
 
     public void toCall(View view) {
@@ -69,7 +137,7 @@ public class IntentDemoActivity extends AppCompatActivity {
         startActivity(call);
     }
 
-    public void showHead(View view){
+    public void showHead(View view) {
         Intent pickContactPerson = new Intent(Intent.ACTION_PICK, Uri.parse("Content://contacts"));
         pickContactPerson.setType(ContactsContract.CommonDataKinds.Phone.CONTENT_TYPE);
         startActivityForResult(pickContactPerson, CONTACTHEAD_REQUEST_CODE);
@@ -144,7 +212,7 @@ public class IntentDemoActivity extends AppCompatActivity {
     public void toContact(View view) {
         Intent pickContactPerson = new Intent(Intent.ACTION_PICK, Uri.parse("Content://contacts"));
         pickContactPerson.setType(ContactsContract.CommonDataKinds.Phone.CONTENT_TYPE);
-        startActivityForResult(pickContactPerson,CONTACT_REQUEST_CODE);
+        startActivityForResult(pickContactPerson, CONTACT_REQUEST_CODE);
     }
 
     /**
@@ -158,11 +226,10 @@ public class IntentDemoActivity extends AppCompatActivity {
      */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-
-        if (resultCode == RESULT_OK&&requestCode==CONTACT_REQUEST_CODE) {
+        if (resultCode == RESULT_OK && requestCode == CONTACT_REQUEST_CODE) {
             Uri contact = data.getData();
             String[] projection = {ContactsContract.CommonDataKinds.Phone.NUMBER, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.CONTACT_ID, ContactsContract.Contacts.Photo.PHOTO_ID};
-            Cursor cursor= getContentResolver().query(contact, projection, null, null, null);
+            Cursor cursor = getContentResolver().query(contact, projection, null, null, null);
             cursor.moveToNext();
             String phoneNumber = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
             String contactName = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
@@ -171,45 +238,48 @@ public class IntentDemoActivity extends AppCompatActivity {
             Bitmap photo = null;
             ContactPerson person = new ContactPerson(contactName, phoneNumber, contactId, photoId, photo);
             Gson gson = new Gson();
+            showCommonDialog(gson.toJson(person));
             cursor.close();
-        }else if (resultCode==RESULT_OK&&requestCode==CONTACTHEAD_REQUEST_CODE){
+            finish();
+        } else if (resultCode == RESULT_OK && requestCode == CONTACTHEAD_REQUEST_CODE) {
             Uri contact = data.getData();
             System.out.println(contact.toString());
-            String[] projection = {ContactsContract.CommonDataKinds.Phone.CONTACT_ID};
-
+            String[] projection = {ContactsContract.CommonDataKinds.Phone.CONTACT_ID, ContactsContract.Contacts.Photo.PHOTO_ID};
             Cursor cursor = getContentResolver().query(contact, projection, null, null, null);
             cursor.moveToNext();
             Integer photoId = cursor.getInt(cursor.getColumnIndex(ContactsContract.Contacts.Photo.PHOTO_ID));
-           long contactId=(long)cursor.getInt(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID));
-           cursor.close();
+            long contactId = (long) cursor.getInt(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID));
+            cursor.close();
             Bitmap photo = null;
             // photoid 大于0 表示联系人有头像 如果没有给此人设置头像则给他一个默认的
-            if (photoId>0){
-                InputStream inputStream=null;
+            if (photoId > 0) {
+                InputStream inputStream = null;
                 try {
-                    Uri uri= ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI,contactId);
-                    Uri photoUri=Uri.withAppendedPath(uri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY);
-                    cursor= getContentResolver().query(photoUri,new String[]{ContactsContract.Contacts.Photo.PHOTO},null
-                    ,null,null);
-                    if (cursor==null)
+                    Uri uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId);
+                    Uri photoUri = Uri.withAppendedPath(uri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY);
+                    cursor = getContentResolver().query(photoUri, new String[]{ContactsContract.Contacts.Photo.PHOTO}, null
+                            , null, null);
+                    if (cursor == null)
                         return;
-                    byte[] photoData=cursor.getBlob(0);
-                    if (photoData!=null){
-                        inputStream=new ByteArrayInputStream(photoData);
-                        photo= BitmapFactory.decodeStream(inputStream);
-                        ImageView photoIv= (ImageView) findViewById(R.id.ivHead);
+                    cursor.moveToFirst();
+                    byte[] photoData = cursor.getBlob(0);
+                    if (photoData != null) {
+                        inputStream = new ByteArrayInputStream(photoData);
+                        photo = BitmapFactory.decodeStream(inputStream);
+                        ImageView photoIv = (ImageView) findViewById(R.id.ivHead);
                         photoIv.setImageBitmap(photo);
-//                        OutputStream outputStream=new FileOutputStream(new File(photo))
+//                        OutputStream outputStream=new FileOutputStream(new File(getExternalStorageDir("test")+"1.png"));
+//                        outputStream.write(photoData);
+//                        outputStream.close();
 //                        Intent photoIntent=new Intent();
+//                        photoIntent.setType("bitmap");
 //                        photoIntent.putExtra("photo",photo);
 //                        setResult(resultCode,photoIntent);
-//                        return;
+                        onResume();
                     }
-
-                }catch (Exception e){
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
-
 
 
             }
@@ -222,10 +292,10 @@ public class IntentDemoActivity extends AppCompatActivity {
         if (ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
             try {
                 ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.READ_CONTACTS}, 11);
-            }catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
-        }else{
+        } else {
             showAllContact();
         }
 
@@ -235,11 +305,9 @@ public class IntentDemoActivity extends AppCompatActivity {
     /**
      * 显示所有联系人到列表
      */
-    public void showAllContact(){
+    public void showAllContact() {
         String[] projection = {ContactsContract.CommonDataKinds.Phone.NUMBER, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.CONTACT_ID, ContactsContract.Contacts.Photo.PHOTO_ID};
         Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
-        System.out.println(uri.toString());
-
         Cursor cursor = getContentResolver().query(uri, projection, null, null, null);
         final List<ContactPerson> persons = new ArrayList<>();
         while (cursor.moveToNext()) {
@@ -278,27 +346,27 @@ public class IntentDemoActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 String content = contacts.getItemAtPosition(position).toString();
-                willCallPhone= content.substring(content.lastIndexOf("phoneNumber=") + 12, content.lastIndexOf("}"));
+                willCallPhone = content.substring(content.lastIndexOf("phoneNumber=") + 12, content.lastIndexOf("}"));
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     if (ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
-                        try{
-                            if (ActivityCompat.shouldShowRequestPermissionRationale(thisActivity,Manifest.permission.CALL_PHONE)){
+                        try {
+                            if (ActivityCompat.shouldShowRequestPermissionRationale(thisActivity, Manifest.permission.CALL_PHONE)) {
 
-                                DialogInterface.OnClickListener btn2ClickListener=new DialogInterface.OnClickListener() {
+                                DialogInterface.OnClickListener btn2ClickListener = new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
                                         ActivityCompat.requestPermissions(thisActivity, new String[]{android.Manifest.permission.CALL_PHONE}, 111);
                                     }
                                 };
-                                showCommonDialog("该操作需要获取拨号权限.",null,"授权",null,btn2ClickListener);
-                            }else {
+                                showCommonDialog("该操作需要获取拨号权限.", null, "授权", null, btn2ClickListener);
+                            } else {
                                 ActivityCompat.requestPermissions(thisActivity, new String[]{android.Manifest.permission.CALL_PHONE}, 111);
                             }
-                        }catch (Exception e){
+                        } catch (Exception e) {
                             e.printStackTrace();
                         }
-                    }else{
+                    } else {
                         callPhone(willCallPhone);
                     }
                 } else {
@@ -310,9 +378,11 @@ public class IntentDemoActivity extends AppCompatActivity {
         });
     }
 
-
     public void callPhone(String phoneNumber) {
-        startActivity(new Intent(Intent.ACTION_CALL,Uri.parse("tel:"+phoneNumber)));
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        startActivity(new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + phoneNumber)));
     }
 
     /**
@@ -418,10 +488,81 @@ public class IntentDemoActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(),"没有获取到电话权限！",Toast.LENGTH_SHORT).show();
                 }
                 return;
+            case 102:
+                if (grantResults.length>0&&grantResults[0]==PackageManager.PERMISSION_GRANTED){
+                    callPhone(willCallPhone);
+                }else{
+                    Toast.makeText(getApplicationContext(),"没有获取到存储权限！",Toast.LENGTH_SHORT).show();
+                }
+                return;
+            case 103:
+                if (grantResults.length>0&&grantResults[0]==PackageManager.PERMISSION_GRANTED){
+                    List<ContactPerson> persons=getAllHead();
+                    for (ContactPerson person:persons) {
+                        System.out.println(person.getContactName()+person.getPhoto());
+                    }
+                }else{
+                    Toast.makeText(getApplicationContext(),"请先给予通讯录权限！",Toast.LENGTH_SHORT).show();
+                }
+                return;
         }
     }
 
+    /**
+     * 获取所有联系人信息（包含头像）
+     */
+    private List<ContactPerson> getAllHead(){
+        String[] projection = {ContactsContract.CommonDataKinds.Phone.NUMBER, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.CONTACT_ID, ContactsContract.Contacts.Photo.PHOTO_ID};
+        Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
+        Cursor cursor = getContentResolver().query(uri, projection, null, null, null);
+        //创建对应图片存放路径
+        File path=new File(getFilesDir(),"images");
+        if (!path.exists())
+            path.mkdir();
+        final List<ContactPerson> persons = new ArrayList<>();
+        while (cursor.moveToNext()) {
+            String phoneNumber = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+            String contactName = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
+            Integer contactId = cursor.getInt(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID));
+            Integer photoId = cursor.getInt(cursor.getColumnIndex(ContactsContract.Contacts.Photo.PHOTO_ID));
+            Bitmap photo = null;
+            if (photoId > 0) {
+                Cursor headCursor = null;
+                Uri headUri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId);
+                Uri photoUri = headUri.withAppendedPath(headUri, ContactsContract.Contacts.Photo.CONTENT_DIRECTORY);
+                headCursor = getContentResolver().query(photoUri, new String[]{ContactsContract.Contacts.Photo.PHOTO}, null
+                        , null, null);
+                headCursor.moveToFirst();
+                byte[] photoData = headCursor.getBlob(0);
+                InputStream inputStream = null;
+                OutputStream outputStream=null;
+                if (photoData != null) {
+                    inputStream = new ByteArrayInputStream(photoData);
+                    photo = BitmapFactory.decodeStream(inputStream);
 
+                    File head=new File(getFilesDir()+"/images",contactName+contactId+".png");
+                    try {
+                        if (!head.exists())
+                            head.createNewFile();
+                        outputStream=new FileOutputStream(head);
+                        outputStream.write(photoData);
+                        outputStream.close();
+                        inputStream.close();
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+                headCursor.close();
+                ContactPerson person = new ContactPerson(contactName, phoneNumber, contactId, photoId, photo);
+                persons.add(person);
+            }
+        }
+        cursor.close();
+        return  persons;
+    }
 
 
 }

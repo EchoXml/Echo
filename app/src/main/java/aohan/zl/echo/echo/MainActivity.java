@@ -2,24 +2,19 @@ package aohan.zl.echo.echo;
 
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -41,37 +36,43 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        System.out.println("onCreate...");
+        System.out.println(this.getClass().getName()+" onCreate...");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-       FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+
+        Button btnToMenu= (Button) findViewById(R.id.btn_ToMenu);
+
+        if (btnToMenu != null) {
+            btnToMenu.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    startActivity(new Intent(getApplicationContext(),MenuActivity.class));
+                }
+            });
+        }
+
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                Toast.makeText(getApplicationContext(),"功能未实现！",Toast.LENGTH_SHORT).show();
             }
         });
     }
-
 
     @Override
     protected void onStart() {
         System.out.println("onStart...");
         super.onStart();
         Intent intent=getIntent();
-        System.out.println(intent==null);
-        System.out.println(intent.getType()==null);
         if (intent.getType()!=null&&intent.getType().equals("text/plain")){
             TextView show= (TextView) findViewById(R.id.tvShowSp);
             show.setText(intent.getExtras().get(Intent.EXTRA_TEXT).toString());
         }
     }
-
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -97,19 +98,20 @@ public class MainActivity extends AppCompatActivity {
     public  void doLogin(View view){
         EditText userName=(EditText) this.findViewById(R.id.etUserName);
         EditText pwd=(EditText) this.findViewById(R.id.etPwd);
-        if (userName.getText().length()==0||pwd.getText().length()==0) {
-            Toast.makeText(getApplicationContext(),"用户名与密码不可为空！",Toast.LENGTH_SHORT).show();
-        }else{
-            User user=new User(null, userName.getText().toString(),pwd.getText().toString());
-            //MODE_PRIVATE表明该文件只能被我们自己的app访问，不能被其他app访问，反之，MODE_READABLE和MODE_WRITEABLE则可以
-            SharedPreferences sp=getPreferences(Context.MODE_PRIVATE);
-            SharedPreferences.Editor editor=sp.edit();
-            editor.putString(user.getUserName(),user.getPassword());
-            editor.commit();
-            BaseUtil.showCommonDialog(getApplicationContext(),"成功添加信息到sharedPreferences!");
+        if (userName != null) {
+            if (userName.getText().length()==0||pwd.getText().length()==0) {
+                Toast.makeText(getApplicationContext(),"用户名与密码不可为空！",Toast.LENGTH_SHORT).show();
+            }else{
+                User user=new User(null, userName.getText().toString(),pwd.getText().toString());
+                //MODE_PRIVATE表明该文件只能被我们自己的app访问，不能被其他app访问，反之，MODE_READABLE和MODE_WRITEABLE则可以
+                SharedPreferences sp=getPreferences(Context.MODE_PRIVATE);
+                SharedPreferences.Editor editor=sp.edit();
+                editor.putString(user.getUserName(),user.getPassword());
+                editor.commit();
+                BaseUtil.showCommonDialog(getApplicationContext(),"成功添加信息到sharedPreferences!");
+            }
         }
     }
-
 
     public  void doReset(View view){
         EditText userName=(EditText) this.findViewById(R.id.etUserName);
@@ -202,8 +204,6 @@ public class MainActivity extends AppCompatActivity {
          return  false;
     }
 
-
-
     public File getExternalStorageDir(String albumName){
         if (BaseUtil.isExternalStorageWriteAble()){
             File file=new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),albumName);
@@ -213,10 +213,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void showTest(View view){
-//        File file=new File(getExternalStorageDir("txtDemo"),"spInfo.txt");
-//        if (file.delete())
-//            showCommonDialog("成功删除文件！");
-
         MySQLite mySQLite=new MySQLite(getApplicationContext());
         SQLiteDatabase db=mySQLite.getWritableDatabase();
         ContentValues values=new ContentValues();
@@ -228,15 +224,12 @@ public class MainActivity extends AppCompatActivity {
             db.insert(MySQLite.TABLE_NAME,null,values);
         }
 
-        
-    }
 
+    }
 
     public void toIntentActivity(View view){
         Intent intent=new Intent(this,IntentDemoActivity.class);
         startActivity(intent);
     }
-
-
 
 }

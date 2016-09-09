@@ -2,10 +2,12 @@ package aohan.zl.echo.echo.model;
 
 import android.graphics.Bitmap;
 
+import java.io.Serializable;
+
 /**
  * Created by Echo on 2016/8/31.
  */
-public class ContactPerson {
+public class ContactPerson implements Serializable {
 
     private String contactName;
 

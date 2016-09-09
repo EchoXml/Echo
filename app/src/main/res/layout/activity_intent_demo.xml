@@ -92,16 +92,42 @@
             android:hint="显示头像"
             android:onClick="showHead"
             />
+        <ImageView
+            android:layout_below="@id/llOp3"
+            android:id="@+id/ivHead"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            />
+        <ImageView
+            android:layout_below="@id/llOp3"
+            android:id="@+id/ivHead2"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            />
+        <Button
+            android:id="@+id/btnHead"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:hint="直接显示头像"
+            />
 
     </LinearLayout>
-    <ImageView
-        android:layout_below="@id/llOp3"
-        android:id="@+id/ivHead"
+
+    <LinearLayout
+        android:id="@+id/llOp4"
+        android:layout_below="@+id/llOp3"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        />
+        android:layout_height="wrap_content">
+        <Button
+            android:id="@+id/btnGetAllHead"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:hint="获取所有联系人头像"
+            />
+    </LinearLayout>
+
     <ListView
-        android:layout_below="@id/llOp3"
+        android:layout_below="@+id/llOp4"
         android:id="@+id/lvShowContacts"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content">
