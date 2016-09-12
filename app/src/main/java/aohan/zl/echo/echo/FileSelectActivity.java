@@ -1,11 +1,15 @@
 package aohan.zl.echo.echo;
 
-import android.graphics.BitmapFactory;
+import android.content.Intent;
+import android.net.Uri;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
@@ -28,12 +32,33 @@ public class FileSelectActivity extends AppCompatActivity {
     //图片名字数组
     String[] mImageFileNames;
 
+    private Intent mResultIntent;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        mResultIntent=new Intent(getPackageName()+".ACTION_RETURN_FILE");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_file_select);
         initData();
+        setResult(RESULT_CANCELED,null);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater menuInflater=getMenuInflater();
+        menuInflater.inflate(R.menu.menu_finish,menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()){
+            case R.id.itemFinish:
+                finish();
+                break;
+        }
+        return true;
     }
 
     /**
@@ -68,6 +93,23 @@ public class FileSelectActivity extends AppCompatActivity {
               //  TextView tv=(TextView)lv.getChildAt(0).findViewById(R.id.friend_msgNum_tv);
                 TextView textView= (TextView) photos.getChildAt(position).findViewById(R.id.tvImageName);
                 Toast.makeText(getApplicationContext(),textView.getText(),Toast.LENGTH_SHORT).show();
+                //获取对于未知的文件
+                File mFile=mImageFiles[position];
+                //该文件对于的Url
+                Uri fileUri=null;
+                try{
+                    fileUri= FileProvider.getUriForFile(getApplicationContext(),getPackageName()+".fileprovider",mFile);
+                }catch (IllegalArgumentException e){
+                    e.printStackTrace();
+                }
+                //create intent and grant temp permission
+                if (fileUri!=null){
+                    //The permission will expire when the app who receive the file over
+                    mResultIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                }
+                mResultIntent.setDataAndType(fileUri,getContentResolver().getType(fileUri));
+                setResult(RESULT_OK,mResultIntent);
+
             }
         });
     }
