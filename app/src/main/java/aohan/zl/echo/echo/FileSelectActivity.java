@@ -1,6 +1,7 @@
 package aohan.zl.echo.echo;
 
 import android.content.Intent;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
@@ -37,6 +38,7 @@ public class FileSelectActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        setVolumeControlStream(AudioManager.STREAM_MUSIC);
         mResultIntent=new Intent(getPackageName()+".ACTION_RETURN_FILE");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_file_select);

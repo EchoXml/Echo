@@ -22,4 +22,7 @@
     <string name="getAllContact">所有联系人</string>
     <string name="testText">测试文本：</string>
     <string name="finish">完成</string>
+    <string name="playMusic">播放音乐</string>
+    <string name="endMusic">结束播放</string>
+
 </resources>

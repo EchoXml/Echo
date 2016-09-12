@@ -2,6 +2,7 @@
 <resources>
     <paths>
         <files-path path="images/" name="myImages" />
+        <!--<files-path-sdcard-music path="sdcard/" ></files-path-sdcard-music>-->
     </paths>
 
 </resources>
